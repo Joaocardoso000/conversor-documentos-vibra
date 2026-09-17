@@ -1,0 +1,2384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Conversor GCONT - Vibra Document Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PDF.js para renderização de páginas e visualização -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- PDF-LIB para manipulação, mesclagem e assinatura -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <!-- jsPDF para conversões textuais em PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF AutoTable para conversão tabular de Excel em PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- SheetJS para ler e gerar arquivos Excel (.xlsx, .xls, .csv) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- JSZip para ler .docx, .pptx e gerar pacote .ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- SortableJS para arrastar e reordenar páginas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            vibra: {
+              dark: '#004415',      /* Verde escuro institucional */
+              green: '#268200',     /* Verde principal */
+              lightgreen: '#33a700',
+              yellow: '#FEDC00',    /* Amarelo vibrante Vibra */
+              blue: '#0000FF',      /* Azul institucional */
+              surface: '#F8FAF7',
+              border: '#E2EBE2',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .drag-active {
+      border-color: #268200 !important;
+      background-color: #f0fdf4 !important;
+      transform: scale(1.006);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .signature-canvas {
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .page-thumb-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      touch-action: pan-y;
+    }
+    .page-thumb-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 68, 21, 0.1);
+    }
+    .sortable-ghost {
+      opacity: 0.35 !important;
+      border: 2px dashed #268200 !important;
+      background: #ecfdf5 !important;
+      transform: scale(0.97);
+    }
+    .sortable-chosen {
+      cursor: grabbing !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 68, 21, 0.2) !important;
+    }
+    .sortable-drag {
+      cursor: grabbing !important;
+      opacity: 0.95;
+      transform: rotate(2deg) scale(1.03);
+    }
+    .split-thumb-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .split-thumb-card.selected {
+      border-color: #268200;
+      background-color: #f0fdf4;
+      box-shadow: 0 0 0 2px #268200;
+    }
+  </style>
+</head>
+<body class="bg-vibra-surface text-slate-800 min-h-screen flex flex-col font-sans antialiased selection:bg-vibra-yellow selection:text-vibra-dark">
+  <!-- Top Banner / Header -->
+  <header class="bg-vibra-dark text-white sticky top-0 z-50 shadow-lg border-b-4 border-vibra-yellow">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-18 py-3 flex items-center justify-between">
+      <!-- Brand & Logo -->
+      <div class="flex items-center space-x-3 sm:space-x-4">
+        <div class="h-11 w-11 rounded-xl bg-white/10 p-1.5 flex items-center justify-center border border-white/20 shadow-inner">
+          <svg class="w-7 h-7 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-lg sm:text-xl font-black tracking-tight text-white flex items-center">
+              CONVERSOR <span class="text-vibra-yellow ml-1.5 font-extrabold tracking-wider">GCONT</span>
+            </span>
+            <span class="text-[10px] px-2 py-0.5 rounded font-extrabold tracking-widest uppercase bg-vibra-yellow text-vibra-dark shadow-sm">VIBRA</span>
+          </div>
+          <p class="text-[11px] text-emerald-200/80 font-medium">Gestão Contábil, Fiscal &amp; Documental • 100% Seguro no Navegador</p>
+        </div>
+      </div>
+
+      <!-- Feature Tool Tabs -->
+      <nav class="flex items-center space-x-1 sm:space-x-1.5 bg-black/25 p-1.5 rounded-2xl border border-white/10 text-xs sm:text-sm font-semibold overflow-x-auto">
+        <button class="tab-btn px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 sm:space-x-2 bg-white text-vibra-dark font-bold shadow-md shrink-0" id="tab-btn-convert" onclick="switchTab('convert')">
+          <svg class="w-4 h-4 text-vibra-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+          </svg>
+          <span>Converter</span>
+        </button>
+        <button class="tab-btn px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 sm:space-x-2 text-emerald-100 hover:text-white hover:bg-white/10 font-bold shrink-0" id="tab-btn-merge" onclick="switchTab('merge')">
+          <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+          </svg>
+          <span class="hidden md:inline">Mesclar</span>
+        </button>
+        <button class="tab-btn px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 sm:space-x-2 text-emerald-100 hover:text-white hover:bg-white/10 font-bold shrink-0" id="tab-btn-split" onclick="switchTab('split')">
+          <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+          </svg>
+          <span class="hidden md:inline">Dividir</span>
+        </button>
+        <button class="tab-btn px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 sm:space-x-2 text-emerald-100 hover:text-white hover:bg-white/10 font-bold shrink-0" id="tab-btn-organize" onclick="switchTab('organize')">
+          <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+          </svg>
+          <span class="hidden md:inline">Organizar</span>
+        </button>
+        <button class="tab-btn px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 sm:space-x-2 text-emerald-100 hover:text-white hover:bg-white/10 font-bold shrink-0" id="tab-btn-sign" onclick="switchTab('sign')">
+          <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+          </svg>
+          <span class="hidden md:inline">Assinar</span>
+        </button>
+        <button class="tab-btn px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 sm:space-x-2 text-emerald-100 hover:text-white hover:bg-white/10 font-bold shrink-0" id="tab-btn-nfe" onclick="switchTab('nfe')">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span class="hidden lg:inline">Extrair NF-e</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Subheader / Status Bar -->
+  <div class="bg-gradient-to-r from-vibra-dark via-vibra-green to-vibra-dark text-white/90 text-xs py-2 px-4 shadow-sm border-b border-emerald-800">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-vibra-yellow text-vibra-dark">
+          PADRÃO AUDITORIA VIBRA
+        </span>
+        <span class="hidden sm:inline text-emerald-100 text-[11px]">Processamento local e confidencial para relatórios, balancetes, planilhas e notas fiscais.</span>
+      </div>
+      <div class="flex items-center space-x-4 text-[11px] font-medium text-emerald-200">
+        <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-vibra-yellow mr-1.5 animate-pulse"></span> Sistema Pronto</span>
+        <span class="hidden md:inline">Criptografia Local (Zero Envio Externo)</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+    <!-- ============================================== -->
+    <!-- ABA 1: CONVERSOR (PDF, Word, Excel, PPTX)      -->
+    <!-- ============================================== -->
+    <section class="tab-content space-y-6" id="tab-convert">
+      <div class="text-center max-w-2xl mx-auto">
+        <h1 class="text-2xl sm:text-3xl font-black text-vibra-dark tracking-tight">Conversor GCONT de Documentos</h1>
+        <p class="mt-2 text-sm text-slate-600 font-medium">Converta demonstrativos, planilhas contábeis, documentos Word e apresentações com máxima fidelidade.</p>
+      </div>
+
+      <!-- Mode Selector -->
+      <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-vibra-border">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" id="conversionModes">
+          <button class="mode-btn active flex items-center justify-center p-2.5 rounded-xl border border-transparent font-bold text-xs text-center transition" id="btn-pdf-word" onclick="setConversionMode('pdf-word')">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-600 mr-2 shrink-0 shadow-sm"></span>PDF ➔ Word
+          </button>
+          <button class="mode-btn flex items-center justify-center p-2.5 rounded-xl border border-transparent font-bold text-xs text-center transition" id="btn-word-pdf" onclick="setConversionMode('word-pdf')">
+            <span class="w-2.5 h-2.5 rounded-full bg-vibra-blue mr-2 shrink-0 shadow-sm"></span>Word ➔ PDF
+          </button>
+          <button class="mode-btn flex items-center justify-center p-2.5 rounded-xl border border-transparent font-bold text-xs text-center transition" id="btn-excel-pdf" onclick="setConversionMode('excel-pdf')">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 mr-2 shrink-0 shadow-sm"></span>Excel ➔ PDF
+          </button>
+          <button class="mode-btn flex items-center justify-center p-2.5 rounded-xl border border-transparent font-bold text-xs text-center transition" id="btn-pdf-excel" onclick="setConversionMode('pdf-excel')">
+            <span class="w-2.5 h-2.5 rounded-full bg-teal-600 mr-2 shrink-0 shadow-sm"></span>PDF ➔ Excel
+          </button>
+          <button class="mode-btn flex items-center justify-center p-2.5 rounded-xl border border-transparent font-bold text-xs text-center transition" id="btn-ppt-word" onclick="setConversionMode('ppt-word')">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shrink-0 shadow-sm"></span>PPT ➔ Word
+          </button>
+          <button class="mode-btn flex items-center justify-center p-2.5 rounded-xl border border-transparent font-bold text-xs text-center transition" id="btn-ppt-pdf" onclick="setConversionMode('ppt-pdf')">
+            <span class="w-2.5 h-2.5 rounded-full bg-vibra-green mr-2 shrink-0 shadow-sm"></span>PPT ➔ PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Dropzone Conversão -->
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-vibra-border p-6 sm:p-10 relative">
+        <div class="border-2 border-dashed border-slate-300 hover:border-vibra-green bg-vibra-surface hover:bg-emerald-50/50 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all" id="dropZone">
+          <input accept=".pdf" class="hidden" id="fileInput" type="file"/>
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white shadow-md flex items-center justify-center border border-emerald-100 text-vibra-green">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-vibra-dark" id="dropTitle">Arraste e solte o arquivo contábil aqui</h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1" id="dropSubtitle">ou clique para selecionar no seu dispositivo</p>
+          <div class="mt-5 inline-flex px-6 py-2.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-bold text-xs sm:text-sm shadow-md transition-all">
+            Selecionar Documento
+          </div>
+        </div>
+
+        <!-- Processing State -->
+        <div class="hidden mt-6 space-y-6" id="processingSection">
+          <div class="flex items-center justify-between p-4 rounded-2xl bg-vibra-surface border border-vibra-border">
+            <div class="flex items-center space-x-3.5 min-w-0">
+              <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-black text-xs uppercase bg-red-600 shadow" id="fileTypeBadge">PDF</div>
+              <div class="truncate">
+                <h4 class="font-bold text-slate-800 truncate text-sm" id="fileNameDisplay">relatorio_mensal.pdf</h4>
+                <p class="text-xs text-slate-500 font-medium" id="fileSizeDisplay">2.4 MB</p>
+              </div>
+            </div>
+            <button class="text-slate-400 hover:text-rose-600 p-2 rounded-lg font-bold text-sm" onclick="resetApp()" title="Remover">✕</button>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-bold text-slate-700">
+              <span id="progressStatusText">Pronto para processar conversão...</span>
+              <span class="text-vibra-green font-black" id="progressPercentText">0%</span>
+            </div>
+            <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-vibra-green to-vibra-dark rounded-full w-0 transition-all duration-300" id="progressBarFill"></div>
+            </div>
+          </div>
+
+          <button class="w-full py-3.5 px-6 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-black text-sm shadow-lg shadow-vibra-green/20 flex items-center justify-center space-x-2 transition" id="btnConvertNow" onclick="processConversion()">
+            <span id="btnConvertLabel">Converter Agora pelo GCONT</span>
+          </button>
+        </div>
+
+        <!-- Result Section -->
+        <div class="hidden mt-6 space-y-6" id="resultSection">
+          <div class="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-vibra-green text-white flex items-center justify-center font-black">✓</div>
+              <div>
+                <h4 class="font-bold text-vibra-dark text-sm">Conversão Concluída com Sucesso!</h4>
+                <p class="text-xs text-emerald-800 font-medium" id="resultMeta">Arquivo pronto para download.</p>
+              </div>
+            </div>
+            <button class="w-full sm:w-auto px-6 py-3 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-bold text-xs sm:text-sm shadow-md flex items-center justify-center space-x-2 transition" id="btnDownload">
+              <span>Baixar Arquivo Convertido</span>
+            </button>
+          </div>
+
+          <div class="border border-slate-200 rounded-2xl overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2.5 flex items-center justify-between text-xs font-bold text-slate-700">
+              <span>Prévia do Conteúdo Extraído</span>
+              <button class="text-vibra-green hover:text-vibra-dark font-bold" id="btnCopyText" onclick="copyExtractedText()">Copiar Texto</button>
+            </div>
+            <div class="p-4 bg-white text-xs text-slate-600 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono" id="textPreviewContent"></div>
+          </div>
+
+          <div class="text-center pt-2">
+            <button class="text-xs text-vibra-green hover:text-vibra-dark font-bold" onclick="resetApp()">Converter outro documento ➔</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- ABA 2: MESCLAR PDFs                           -->
+    <!-- ============================================== -->
+    <section class="tab-content hidden space-y-6" id="tab-merge">
+      <div class="text-center max-w-2xl mx-auto">
+        <h1 class="text-2xl sm:text-3xl font-black text-vibra-dark tracking-tight">Mesclar Relatórios &amp; PDFs GCONT</h1>
+        <p class="mt-2 text-sm text-slate-600 font-medium">Una múltiplos balancetes, anexos contábeis e notas fiscais em um único PDF sequencial organizado.</p>
+      </div>
+
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-vibra-border p-6 sm:p-10 space-y-6">
+        <!-- Multiple Upload Box -->
+        <div class="border-2 border-dashed border-emerald-300 hover:border-vibra-green bg-emerald-50/40 hover:bg-emerald-50/80 rounded-2xl p-8 text-center cursor-pointer transition-all" id="mergeDropZone">
+          <input accept=".pdf" class="hidden" id="mergeFileInput" multiple="" type="file"/>
+          <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white shadow-md flex items-center justify-center text-vibra-green border border-emerald-100">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-slate-800">Selecione ou Arraste múltiplos arquivos PDF</h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">Carregue 2 ou mais documentos contábeis de uma vez só</p>
+          <div class="mt-4 inline-flex px-6 py-2.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-bold text-xs sm:text-sm shadow-md transition">
+            Adicionar Arquivos PDF
+          </div>
+        </div>
+
+        <!-- Files List with Ordering Controls -->
+        <div class="hidden space-y-3" id="mergeFileListContainer">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wide">
+              Arquivos na fila de mesclagem (<span class="text-vibra-green" id="mergeCount">0</span>)
+            </h4>
+            <button class="text-xs text-rose-600 hover:text-rose-800 font-bold" onclick="clearMergeList()">Limpar Todos</button>
+          </div>
+
+          <div class="space-y-2 max-h-72 overflow-y-auto pr-1" id="mergeFileList"></div>
+
+          <div class="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200">
+            <label class="text-xs text-slate-500 flex items-center cursor-pointer">
+              <input accept=".pdf" class="hidden" id="mergeAddMoreInput" multiple="" type="file"/>
+              <span class="underline text-vibra-green hover:text-vibra-dark font-bold" onclick="document.getElementById('mergeAddMoreInput').click()">+ Adicionar mais PDFs à fila</span>
+            </label>
+            <button class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-black text-sm shadow-lg shadow-vibra-green/20 flex items-center justify-center space-x-2 transition" id="btnExecuteMerge" onclick="executeMergePdfs()">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+              </svg>
+              <span>Mesclar e Baixar PDF Unificado</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- ABA 3: DIVIDIR PDF (Extração & Pacote .ZIP)     -->
+    <!-- ============================================== -->
+    <section class="tab-content hidden space-y-6" id="tab-split">
+      <div class="text-center max-w-2xl mx-auto">
+        <h1 class="text-2xl sm:text-3xl font-black text-vibra-dark tracking-tight">Dividir &amp; Extrair Páginas GCONT</h1>
+        <p class="mt-2 text-sm text-slate-600 font-medium">Extraia páginas específicas de relatórios, separe pares e ímpares ou divida todas as folhas em um pacote ZIP organizado.</p>
+      </div>
+
+      <!-- Upload Single PDF for Split -->
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-vibra-border p-8 text-center" id="splitUploadBox">
+        <div class="border-2 border-dashed border-emerald-300 hover:border-vibra-green bg-emerald-50/40 hover:bg-emerald-50/80 rounded-2xl p-8 sm:p-12 cursor-pointer transition-all" id="splitDropZone">
+          <input accept=".pdf" class="hidden" id="splitFileInput" type="file"/>
+          <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white shadow-md flex items-center justify-center text-vibra-green border border-emerald-100">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-slate-800">Carregue o PDF para selecionar páginas e dividir</h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">Extraia termos de abertura, balancetes parciais ou separe demonstrativos página por página</p>
+          <div class="mt-4 inline-flex px-6 py-2.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-bold text-xs sm:text-sm shadow-md transition">
+            Selecionar Documento PDF
+          </div>
+        </div>
+      </div>
+
+      <!-- Split Workspace -->
+      <div class="hidden bg-white rounded-3xl shadow-xl border border-vibra-border p-6 space-y-6" id="splitWorkspace">
+        <!-- Top Toolbar -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="text-base font-bold text-slate-900 truncate" id="splitFileName">documento.pdf</h3>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-vibra-yellow text-vibra-dark" id="splitBadgeCount">
+                0 selecionadas
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5 font-medium" id="splitPageStats">Carregando miniaturas...</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200" onclick="resetSplit()">Trocar PDF</button>
+            <button class="px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-black text-xs sm:text-sm shadow-md flex items-center space-x-1.5 transition" id="btnSplitOddEven" onclick="executeSplitOddEven()" title="Cria um PDF com as páginas ímpares e outro com as páginas pares">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
+              <span>Separar Pares &amp; Ímpares (2 PDFs)</span>
+            </button>
+            <button class="px-5 py-2.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-black text-xs sm:text-sm shadow-md flex items-center space-x-1.5 transition" id="btnExtractSelected" onclick="executeExtractSelected()">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+              </svg>
+              <span id="btnExtractSelectedText">Extrair Selecionadas (1 PDF)</span>
+            </button>
+            <button class="px-5 py-2.5 rounded-xl bg-vibra-dark hover:bg-emerald-900 text-vibra-yellow border border-vibra-yellow/30 font-black text-xs sm:text-sm shadow-md flex items-center space-x-1.5 transition" id="btnSplitAllZip" onclick="executeSplitZip()">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+              </svg>
+              <span id="btnZipText">Dividir Todas (.ZIP)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Selection Controls & Range Filter -->
+        <div class="bg-vibra-surface p-4 rounded-2xl border border-vibra-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center space-x-2 flex-wrap">
+            <span class="text-xs font-bold text-slate-700">Seleção Rápida:</span>
+            <button class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-emerald-100 text-vibra-dark border border-slate-200" onclick="selectSplitPreset('all')">Todas</button>
+            <button class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-rose-100 text-slate-600 border border-slate-200" onclick="selectSplitPreset('none')">Nenhuma</button>
+            <button class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-emerald-100 text-vibra-dark border border-slate-200" onclick="selectSplitPreset('odd')">Ímpares</button>
+            <button class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-emerald-100 text-vibra-dark border border-slate-200" onclick="selectSplitPreset('even')">Pares</button>
+          </div>
+
+          <!-- Interval input -->
+          <div class="flex items-center space-x-2">
+            <label class="text-xs font-bold text-slate-700 whitespace-nowrap" for="splitRangeInput">Intervalo (ex: 1-3, 5):</label>
+            <div class="flex items-center space-x-1">
+              <input class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs w-28 sm:w-36 focus:ring-2 focus:ring-vibra-green outline-none bg-white font-medium" id="splitRangeInput" placeholder="Ex: 1-4, 7" type="text"/>
+              <button class="px-3 py-1.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-bold text-xs shadow-sm transition" onclick="applySplitRange()">Aplicar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thumbnail Grid of Split Pages -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="splitPagesGrid"></div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- ABA 4: ORGANIZAR PÁGINAS (Girar, Deletar, Mover) -->
+    <!-- ============================================== -->
+    <section class="tab-content hidden space-y-6" id="tab-organize">
+      <div class="text-center max-w-2xl mx-auto">
+        <h1 class="text-2xl sm:text-3xl font-black text-vibra-dark tracking-tight">Organizador de Páginas GCONT</h1>
+        <p class="mt-2 text-sm text-slate-600 font-medium">Ordene páginas arrastando os cards, corrija a rotação de páginas digitalizadas ou exclua folhas desnecessárias.</p>
+      </div>
+
+      <!-- Upload Single PDF for Organizer -->
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-vibra-border p-8 text-center" id="organizeUploadBox">
+        <div class="border-2 border-dashed border-sky-300 hover:border-sky-500 bg-sky-50/40 hover:bg-sky-50/80 rounded-2xl p-8 sm:p-10 cursor-pointer transition-all" id="organizeDropZone">
+          <input accept=".pdf" class="hidden" id="organizeFileInput" type="file"/>
+          <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white shadow-md flex items-center justify-center text-sky-600 border border-sky-100">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-slate-800">Carregue o PDF para reorganizar suas folhas</h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">Ideal para relatórios digitalizados com páginas invertidas</p>
+          <div class="mt-4 inline-flex px-6 py-2.5 rounded-xl bg-vibra-dark hover:bg-vibra-green text-white font-bold text-xs sm:text-sm shadow-md transition">
+            Abrir Documento PDF
+          </div>
+        </div>
+      </div>
+
+      <!-- Organizer Workspace -->
+      <div class="hidden bg-white rounded-3xl shadow-xl border border-vibra-border p-6 space-y-6" id="organizeWorkspace">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="text-base font-bold text-slate-900 truncate" id="organizeFileName">documento.pdf</h3>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-vibra-yellow text-vibra-dark">
+                🖐️ Arraste os cards para ordenar
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5 font-medium" id="organizePageStats">Renderizando miniaturas...</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200" onclick="resetOrganize()">Trocar PDF</button>
+            <button class="px-6 py-2.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-black text-xs sm:text-sm shadow-md flex items-center space-x-1.5 transition" id="btnSaveOrganized" onclick="saveOrganizedPdf()">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+              </svg>
+              <span>Salvar e Baixar PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid of pages -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="pagesGrid"></div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- ABA 5: PÔR ASSINATURA NO PDF                   -->
+    <!-- ============================================== -->
+    <section class="tab-content hidden space-y-6" id="tab-sign">
+      <div class="text-center max-w-2xl mx-auto">
+        <h1 class="text-2xl sm:text-3xl font-black text-vibra-dark tracking-tight">Assinatura &amp; Rubrica Digital GCONT</h1>
+        <p class="mt-2 text-sm text-slate-600 font-medium">Desenhe sua rubrica ou insira carimbo contábil e posicione exatamente sobre a linha de aprovação do documento.</p>
+      </div>
+
+      <!-- Upload PDF to Sign -->
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-vibra-border p-8 text-center" id="signUploadBox">
+        <div class="border-2 border-dashed border-emerald-300 hover:border-vibra-green bg-emerald-50/40 hover:bg-emerald-50/80 rounded-2xl p-8 sm:p-10 cursor-pointer transition-all" id="signDropZone">
+          <input accept=".pdf" class="hidden" id="signFileInput" type="file"/>
+          <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white shadow-md flex items-center justify-center text-vibra-green border border-emerald-100">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            </svg>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-slate-800">Selecione o documento contábil para assinar</h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">Contratos, aprovações de faturas, termos de posse ou fechamento de balanço</p>
+          <div class="mt-4 inline-flex px-6 py-2.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-bold text-xs sm:text-sm shadow-md transition">
+            Carregar PDF para Assinatura
+          </div>
+        </div>
+      </div>
+
+      <!-- Signature Studio Workspace -->
+      <div class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6" id="signWorkspace">
+        <!-- Left Column: Signature Creator Box -->
+        <div class="lg:col-span-5 bg-white rounded-3xl shadow-xl border border-vibra-border p-5 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+            <h3 class="font-black text-vibra-dark text-sm flex items-center">
+              <span class="mr-2">✍️</span> 1. Desenhe sua Rubrica / Assinatura
+            </h3>
+            <button class="text-xs font-bold text-rose-600 hover:text-rose-800" onclick="clearSignatureCanvas()">Limpar</button>
+          </div>
+
+          <!-- Signature Pad -->
+          <div class="relative bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl overflow-hidden p-1">
+            <canvas class="signature-canvas w-full bg-white rounded-xl shadow-inner touch-none" height="200" id="sigCanvas" width="450"></canvas>
+            <div class="absolute bottom-2 left-4 text-[10px] text-slate-400 pointer-events-none select-none">
+              Desenhe aqui com mouse ou toque na tela
+            </div>
+          </div>
+
+          <!-- Pen Controls -->
+          <div class="flex items-center justify-between text-xs text-slate-600">
+            <div class="flex items-center space-x-2">
+              <span class="font-bold">Tinta:</span>
+              <button class="w-6 h-6 rounded-full bg-[#004415] border-2 border-white shadow ring-1 ring-slate-300" onclick="setPenColor('#004415')" title="Verde Escuro Vibra"></button>
+              <button class="w-6 h-6 rounded-full bg-[#0000FF] border-2 border-white shadow ring-1 ring-slate-300" onclick="setPenColor('#0000FF')" title="Azul Caneta"></button>
+              <button class="w-6 h-6 rounded-full bg-slate-900 border-2 border-white shadow ring-1 ring-slate-300" onclick="setPenColor('#0f172a')" title="Preto"></button>
+            </div>
+            <div>
+              <label class="text-[11px] font-bold text-vibra-green hover:text-vibra-dark cursor-pointer underline">
+                Carregar PNG transparente
+                <input accept="image/png,image/jpeg" class="hidden" id="sigImageUpload" type="file"/>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 space-y-3.5">
+            <h4 class="font-black text-vibra-dark text-xs uppercase tracking-wide">2. Configuração de Estampa</h4>
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-bold text-slate-700" for="signPageSelect">Página a assinar:</label>
+              <select class="p-2 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-vibra-green" id="signPageSelect" onchange="loadSignPagePreview()"></select>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-bold text-slate-700" for="sigScaleSlider">Tamanho do carimbo:</label>
+              <input class="w-32 accent-vibra-green" id="sigScaleSlider" max="250" min="50" oninput="updateSignatureStampSize()" type="range" value="130"/>
+            </div>
+            <div class="p-3 bg-vibra-surface border border-emerald-100 rounded-xl">
+              <p class="text-[11px] text-slate-600 leading-snug">
+                💡 <strong>Posicionamento livre:</strong> Clique e arraste o retângulo verde sobre a visualização da folha à direita até a posição desejada.
+              </p>
+            </div>
+            <button class="w-full py-3.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-black text-xs sm:text-sm shadow-lg shadow-vibra-green/20 flex items-center justify-center space-x-2 transition" id="btnApplySignature" onclick="applySignatureAndDownload()">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+              </svg>
+              <span>Aplicar Assinatura e Baixar PDF</span>
+            </button>
+            <button class="w-full py-2 text-xs text-slate-400 hover:text-slate-600 font-bold" onclick="resetSign()">Trocar Documento</button>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Page Viewer & Draggable Stamp -->
+        <div class="lg:col-span-7 bg-white rounded-3xl shadow-xl border border-vibra-border p-5 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between pb-3 border-b border-slate-200 text-xs">
+            <span class="font-black text-vibra-dark">Visualização &amp; Posição no Documento</span>
+            <span class="text-vibra-green font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">Arraste a caixa de assinatura</span>
+          </div>
+          <div class="relative mt-4 border-2 border-slate-300 rounded-xl shadow-lg overflow-hidden bg-slate-200" id="pageViewerWrapper">
+            <!-- Canvas PDF Page -->
+            <canvas class="block" id="signPageCanvas"></canvas>
+            <!-- Draggable Signature Stamp Box -->
+            <div class="absolute border-2 border-dashed border-vibra-green bg-vibra-green/15 cursor-move flex items-center justify-center select-none shadow-md rounded-lg" id="draggableStamp" style="width: 130px; height: 65px; top: 75%; left: 50%; transform: translate(-50%, -50%);">
+              <img alt="Assinatura" class="max-w-full max-h-full object-contain pointer-events-none" id="stampImagePreview" src=""/>
+              <span class="text-[11px] text-vibra-dark font-black pointer-events-none" id="stampPlaceholderText">Sua Assinatura</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- ABA 6: EXTRATOR FISCAL & DANFE (PDF & XML)     -->
+    <!-- ============================================== -->
+    <section class="tab-content hidden space-y-6" id="tab-nfe">
+      <div class="text-center max-w-2xl mx-auto">
+        <h1 class="text-2xl sm:text-3xl font-black text-vibra-dark tracking-tight">Extrator Fiscal &amp; DANFE GCONT</h1>
+        <p class="mt-2 text-sm text-slate-600 font-medium">Extraia Chaves de Acesso (44 dígitos), valores e CNPJs de notas fiscais (PDF/XML). Exporte para Excel ou filtre apenas as páginas de notas fiscais.</p>
+      </div>
+
+      <!-- Upload Single / Multi PDF/XML for NFe -->
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-vibra-border p-8 text-center" id="nfeUploadBox">
+        <div class="border-2 border-dashed border-amber-300 hover:border-vibra-green bg-amber-50/30 hover:bg-emerald-50/50 rounded-2xl p-8 sm:p-12 cursor-pointer transition-all" id="nfeDropZone">
+          <input accept=".pdf,.xml" class="hidden" id="nfeFileInput" multiple="" type="file"/>
+          <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white shadow-md flex items-center justify-center text-amber-600 border border-amber-100">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-slate-800">Selecione arquivos PDF (DANFE) ou XML de Notas Fiscais</h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">Varredura automática de Chaves de Acesso de 44 dígitos, NF-e, NFS-e e faturas</p>
+          <div class="mt-4 inline-flex px-6 py-2.5 rounded-xl bg-vibra-dark hover:bg-vibra-green text-vibra-yellow font-bold text-xs sm:text-sm shadow-md transition">
+            Carregar Notas Fiscais (PDF / XML)
+          </div>
+        </div>
+      </div>
+
+      <!-- NFe Workspace -->
+      <div class="hidden bg-white rounded-3xl shadow-xl border border-vibra-border p-6 space-y-6" id="nfeWorkspace">
+        <!-- Top Toolbar -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="text-base font-bold text-slate-900 truncate" id="nfeFileName">documento.pdf</h3>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-vibra-yellow text-vibra-dark" id="nfeBadgeCount">
+                0 notas identificadas
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5 font-medium" id="nfeScanStatus">Varredura concluída</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200" onclick="resetNfeScanner()">Novo Documento</button>
+            <button class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs sm:text-sm shadow-md flex items-center space-x-1.5 transition" onclick="copyAllAccessKeys()" title="Copia todas as chaves de 44 dígitos encontradas">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+              </svg>
+              <span>Copiar Chaves (44 Dígitos)</span>
+            </button>
+            <button class="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs sm:text-sm shadow-md flex items-center space-x-1.5 transition" onclick="exportNfeToExcel()" title="Exportar tabela para Excel">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Exportar Excel (.xlsx)</span>
+            </button>
+            <button class="px-4 py-2.5 rounded-xl bg-vibra-green hover:bg-vibra-dark text-white font-black text-xs sm:text-sm shadow-md flex items-center space-x-1.5 transition" id="btnExtractNfePagesPdf" onclick="extractOnlyNfePagesToPdf()" title="Cria um PDF contendo unicamente as páginas identificadas como notas fiscais">
+              <svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Gerar PDF Só com as NFs</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary KPIs -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-vibra-surface p-3.5 rounded-2xl border border-vibra-border flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-bold text-slate-500 uppercase">Notas Identificadas</p>
+              <h4 class="text-xl font-black text-vibra-dark" id="kpiNfeTotal">0</h4>
+            </div>
+            <span class="text-2xl">📑</span>
+          </div>
+          <div class="bg-vibra-surface p-3.5 rounded-2xl border border-vibra-border flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-bold text-slate-500 uppercase">Valor Total Somado</p>
+              <h4 class="text-xl font-black text-vibra-green" id="kpiNfeValorTotal">R$ 0,00</h4>
+            </div>
+            <span class="text-2xl">💰</span>
+          </div>
+          <div class="bg-vibra-surface p-3.5 rounded-2xl border border-vibra-border flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-bold text-slate-500 uppercase">Páginas de Notas</p>
+              <h4 class="text-xl font-black text-slate-800" id="kpiNfePagesCount">0 página(s)</h4>
+            </div>
+            <span class="text-2xl">🔍</span>
+          </div>
+        </div>
+
+        <!-- Search input for table -->
+        <div class="flex items-center justify-between gap-3">
+          <input class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs w-full max-w-sm focus:ring-2 focus:ring-vibra-green outline-none bg-slate-50 font-medium" id="nfeTableSearch" oninput="filterNfeTable()" placeholder="Buscar por chave, CNPJ, emitente ou valor..." type="text"/>
+          <span class="text-xs text-slate-400 font-medium hidden sm:inline">Clique em qualquer chave para copiá-la</span>
+        </div>
+
+        <!-- Extracted Invoices Table -->
+        <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-700">
+            <thead class="bg-slate-100 text-slate-800 font-black border-b border-slate-200 uppercase tracking-wider text-[11px]">
+              <tr>
+                <th class="py-3 px-3">Pág</th>
+                <th class="py-3 px-3">Tipo</th>
+                <th class="py-3 px-3">Nº Nota</th>
+                <th class="py-3 px-3">Chave de Acesso (44 Dígitos)</th>
+                <th class="py-3 px-3">Emitente (CNPJ)</th>
+                <th class="py-3 px-3">Destinatário (CNPJ)</th>
+                <th class="py-3 px-3">Data</th>
+                <th class="py-3 px-3 text-right">Valor Total</th>
+                <th class="py-3 px-3 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white" id="nfeTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-vibra-dark border-t border-emerald-950 text-white/70 py-6 text-xs mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <span class="text-vibra-yellow font-black tracking-wider text-sm">VIBRA GCONT</span>
+        <span>• Plataforma de Gestão Contábil, Fiscal &amp; Documental</span>
+      </div>
+      <div class="flex items-center space-x-6 text-[11px] text-emerald-200">
+        <span>Segurança Corporativa</span>
+        <span>Processamento Client-Side</span>
+        <span class="text-vibra-yellow font-bold">Vibra Energia</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Container -->
+  <div class="fixed bottom-6 right-6 max-w-sm bg-vibra-dark text-white text-xs px-4 py-3 rounded-2xl shadow-2xl transition-all duration-300 transform translate-y-20 opacity-0 z-50 flex items-center space-x-3 border-l-4 border-vibra-yellow" id="toast">
+    <span class="text-base" id="toastIcon">ℹ️</span>
+    <span class="font-medium" id="toastMsg">Mensagem</span>
+  </div>
+
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-vibra-dark', 'shadow-md');
+        btn.classList.add('text-emerald-100');
+      });
+
+      const activeSection = document.getElementById(`tab-${tabId}`);
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (activeSection) activeSection.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.add('bg-white', 'text-vibra-dark', 'shadow-md');
+        activeBtn.classList.remove('text-emerald-100');
+      }
+
+      if (tabId === 'sign' && signaturePadCanvas) {
+        resizeSignatureCanvas();
+      }
+    }
+
+    function showToast(message, icon = 'ℹ️') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+      if (!toast || !toastMsg) return;
+      toastMsg.innerText = message;
+      if (toastIcon) toastIcon.innerText = icon;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3500);
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function copyToClipboard(text) {
+      if (!text) return;
+      const t = document.createElement('textarea');
+      t.value = text;
+      document.body.appendChild(t);
+      t.select();
+      document.execCommand('copy');
+      document.body.removeChild(t);
+      showToast('Copiado para a área de transferência!', '📋');
+    }
+
+    // ==============================================================
+    // LÓGICA DA ABA 1: CONVERSOR MULTIFORMATO
+    // ==============================================================
+    const MODES = {
+      'pdf-word': { name: 'PDF para Word', accept: '.pdf', badge: 'PDF', bg: 'bg-red-600', title: 'Arraste seu arquivo PDF aqui' },
+      'word-pdf': { name: 'Word para PDF', accept: '.docx,.doc', badge: 'DOCX', bg: 'bg-vibra-blue', title: 'Arraste seu arquivo Word (.docx) aqui' },
+      'excel-pdf': { name: 'Excel para PDF', accept: '.xlsx,.xls,.csv', badge: 'XLSX', bg: 'bg-emerald-600', title: 'Arraste sua planilha Excel (.xlsx, .csv) aqui' },
+      'pdf-excel': { name: 'PDF para Excel', accept: '.pdf', badge: 'PDF', bg: 'bg-teal-600', title: 'Arraste seu PDF com tabelas contábeis aqui' },
+      'ppt-word': { name: 'PowerPoint para Word', accept: '.pptx', badge: 'PPTX', bg: 'bg-amber-500', title: 'Arraste sua apresentação (.pptx) aqui' },
+      'ppt-pdf': { name: 'PowerPoint para PDF', accept: '.pptx', badge: 'PPTX', bg: 'bg-vibra-green', title: 'Arraste sua apresentação (.pptx) aqui' }
+    };
+
+    let currentMode = 'pdf-word';
+    let currentConvertFile = null;
+    let convertedBlob = null;
+    let extractedRawText = '';
+
+    function setConversionMode(mode) {
+      currentMode = mode;
+      const config = MODES[mode] || MODES['pdf-word'];
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-50', 'text-vibra-dark', 'border-vibra-green', 'shadow-sm');
+        btn.classList.add('text-slate-600');
+      });
+
+      const activeBtn = document.getElementById(`btn-${mode}`);
+      if (activeBtn) activeBtn.classList.add('bg-emerald-50', 'text-vibra-dark', 'border-vibra-green', 'shadow-sm');
+
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) fileInput.accept = config.accept;
+      const dropTitle = document.getElementById('dropTitle');
+      if (dropTitle) dropTitle.innerText = config.title;
+      if (currentConvertFile) resetApp();
+    }
+
+    // Função utilitária para inicialização resiliente de zonas de arrastar/soltar
+    function setupDropZone(dropZoneId, inputId, onFileSelected, acceptMultiple = false) {
+      const dropEl = document.getElementById(dropZoneId);
+      const inputEl = document.getElementById(inputId);
+      if (!dropEl || !inputEl) return;
+
+      dropEl.addEventListener('click', () => inputEl.click());
+      ['dragenter', 'dragover'].forEach(evtName => {
+        dropEl.addEventListener(evtName, ev => {
+          ev.preventDefault();
+          dropEl.classList.add('drag-active');
+        });
+      });
+      ['dragleave', 'drop'].forEach(evtName => {
+        dropEl.addEventListener(evtName, ev => {
+          ev.preventDefault();
+          dropEl.classList.remove('drag-active');
+        });
+      });
+      dropEl.addEventListener('drop', ev => {
+        if (ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files.length > 0) {
+          if (acceptMultiple) {
+            onFileSelected(ev.dataTransfer.files);
+          } else {
+            onFileSelected(ev.dataTransfer.files[0]);
+          }
+        }
+      });
+      inputEl.addEventListener('change', ev => {
+        if (ev.target && ev.target.files && ev.target.files.length > 0) {
+          if (acceptMultiple) {
+            onFileSelected(ev.target.files);
+          } else {
+            onFileSelected(ev.target.files[0]);
+          }
+        }
+      });
+    }
+
+    function handleFileSelection(file) {
+      currentConvertFile = file;
+      document.getElementById('fileNameDisplay').innerText = file.name;
+      document.getElementById('fileSizeDisplay').innerText = formatBytes(file.size);
+      const modeConfig = MODES[currentMode] || MODES['pdf-word'];
+      const badge = document.getElementById('fileTypeBadge');
+      badge.className = `w-11 h-11 rounded-xl flex items-center justify-center text-white font-black text-xs uppercase shadow ${modeConfig.bg}`;
+      badge.innerText = modeConfig.badge;
+      dropZone.classList.add('hidden');
+      document.getElementById('processingSection').classList.remove('hidden');
+      document.getElementById('resultSection').classList.add('hidden');
+      updateProgress(0, 'Arquivo carregado. Clique para iniciar a conversão.');
+      document.getElementById('btnConvertNow').disabled = false;
+    }
+
+    function updateProgress(percent, message) {
+      document.getElementById('progressBarFill').style.width = `${percent}%`;
+      document.getElementById('progressPercentText').innerText = `${percent}%`;
+      if (message) document.getElementById('progressStatusText').innerText = message;
+    }
+
+    async function processConversion() {
+      if (!currentConvertFile) return;
+      const btn = document.getElementById('btnConvertNow');
+      btn.disabled = true;
+      try {
+        if (currentMode === 'pdf-word') await convertPdfToWord(currentConvertFile);
+        else if (currentMode === 'word-pdf') await convertWordToPdf(currentConvertFile);
+        else if (currentMode === 'excel-pdf') await convertExcelToPdf(currentConvertFile);
+        else if (currentMode === 'pdf-excel') await convertPdfToExcel(currentConvertFile);
+        else if (currentMode === 'ppt-word') await convertPptToWord(currentConvertFile);
+        else if (currentMode === 'ppt-pdf') await convertPptToPdf(currentConvertFile);
+      } catch (err) {
+        showToast('Erro: ' + err.message, '❌');
+        updateProgress(0, 'Falha na conversão.');
+        btn.disabled = false;
+      }
+    }
+
+    async function convertPdfToWord(file) {
+      updateProgress(15, 'Lendo páginas do PDF contábil...');
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+      let wordHtml = `<html><head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.5;padding:2cm;}.page-break{page-break-before:always;margin-top:20pt;}</style></head><body>`;
+      let fullRaw = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        updateProgress(Math.round(20 + (i / pdf.numPages) * 60), `Processando página ${i}/${pdf.numPages}...`);
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const textStr = textContent.items.map(item => item.str).join(' ');
+        if (i > 1) wordHtml += `<div class="page-break"></div>`;
+        wordHtml += `<p style="color:#004415;font-size:9pt;font-weight:bold;">[GCONT - Página ${i}]</p><p>${escapeHtml(textStr)}</p>`;
+        fullRaw += `--- Página ${i} ---\n${textStr}\n\n`;
+      }
+      wordHtml += `</body></html>`;
+      extractedRawText = fullRaw;
+      convertedBlob = new Blob([wordHtml], { type: 'application/msword;charset=utf-8' });
+      finishConversion(file.name.replace(/\.[^/.]+$/, '') + '.doc');
+    }
+
+    async function convertWordToPdf(file) {
+      updateProgress(25, 'Descompactando documento Word...');
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const docXml = zip.file('word/document.xml');
+      if (!docXml) throw new Error('Documento .docx inválido ou corrompido.');
+      const xmlDoc = new DOMParser().parseFromString(await docXml.async('text'), 'text/xml');
+      const pNodes = xmlDoc.getElementsByTagName('w:p');
+      const paras = [];
+      for (let i = 0; i < pNodes.length; i++) {
+        let t = '';
+        const texts = pNodes[i].getElementsByTagName('w:t');
+        for (let j = 0; j < texts.length; j++) t += texts[j].textContent;
+        if (t.trim()) paras.push(t.trim());
+      }
+      extractedRawText = paras.join('\n\n');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+      let y = 25;
+      paras.forEach(p => {
+        const lines = pdf.splitTextToSize(p, 170);
+        if (y + lines.length * 6 > 275) { pdf.addPage(); y = 25; }
+        pdf.text(lines, 20, y);
+        y += lines.length * 6 + 4;
+      });
+      convertedBlob = pdf.output('blob');
+      finishConversion(file.name.replace(/\.[^/.]+$/, '') + '.pdf');
+    }
+
+    async function convertExcelToPdf(file) {
+      updateProgress(25, 'Lendo planilhas Excel via SheetJS...');
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+      let fullRaw = '';
+      const sheetNames = workbook.SheetNames;
+
+      sheetNames.forEach((sheetName, idx) => {
+        if (idx > 0) pdf.addPage();
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        fullRaw += `=== Planilha: ${sheetName} ===\n`;
+
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 68, 21);
+        pdf.text(`GCONT Vibra - Planilha: ${sheetName}`, 40, 35);
+
+        if (rows.length > 0) {
+          const header = rows[0].map(h => String(h || ''));
+          const body = rows.slice(1).map(r => r.map(c => String(c === undefined ? '' : c)));
+          fullRaw += rows.map(r => r.join(' \t ')).join('\n') + '\n\n';
+
+          if (pdf.autoTable) {
+            pdf.autoTable({
+              head: [header],
+              body: body,
+              startY: 50,
+              theme: 'striped',
+              headStyles: { fillColor: [0, 68, 21], textColor: [254, 220, 0], fontStyle: 'bold' },
+              styles: { fontSize: 8, cellPadding: 3.5 },
+              margin: { left: 40, right: 40 }
+            });
+          }
+        }
+      });
+
+      extractedRawText = fullRaw;
+      convertedBlob = pdf.output('blob');
+      finishConversion(file.name.replace(/\.[^/.]+$/, '') + '.pdf');
+    }
+
+    async function convertPdfToExcel(file) {
+      updateProgress(20, 'Lendo dados tabulares do PDF...');
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+      const workbook = XLSX.utils.book_new();
+      let fullRaw = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        updateProgress(Math.round(20 + (i / pdf.numPages) * 70), `Tabulando página ${i}/${pdf.numPages}...`);
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        
+        // Agrupa itens por linha baseando-se na coordenada Y
+        const lineMap = {};
+        textContent.items.forEach(it => {
+          const y = Math.round(it.transform[5]);
+          if (!lineMap[y]) lineMap[y] = [];
+          lineMap[y].push({ x: it.transform[4], str: it.str });
+        });
+
+        const sortedYs = Object.keys(lineMap).map(Number).sort((a,b) => b - a);
+        const sheetRows = [];
+
+        sortedYs.forEach(y => {
+          const sortedCols = lineMap[y].sort((a,b) => a.x - b.x);
+          const rowText = sortedCols.map(c => c.str.trim()).filter(Boolean);
+          if (rowText.length > 0) {
+            sheetRows.push(rowText);
+            fullRaw += rowText.join('\t') + '\n';
+          }
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+        XLSX.utils.book_append_sheet(workbook, ws, `Página ${i}`);
+        fullRaw += `\n`;
+      }
+
+      extractedRawText = fullRaw;
+      const wbOut = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      convertedBlob = new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      finishConversion(file.name.replace(/\.[^/.]+$/, '') + '.xlsx');
+    }
+
+    async function extractPptxText(file) {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const slides = [];
+      const keys = Object.keys(zip.files).filter(k => k.match(/^ppt\/slides\/slide[0-9]+\.xml$/));
+      keys.sort((a,b) => parseInt(a.match(/[0-9]+/)[0]) - parseInt(b.match(/[0-9]+/)[0]));
+      for (let i = 0; i < keys.length; i++) {
+        const xml = new DOMParser().parseFromString(await zip.file(keys[i]).async('text'), 'text/xml');
+        const textElements = xml.getElementsByTagName('a:t');
+        let texts = [];
+        for (let j = 0; j < textElements.length; j++) {
+          if (textElements[j].textContent.trim()) texts.push(textElements[j].textContent.trim());
+        }
+        slides.push({ slideNum: i + 1, texts });
+      }
+      return slides;
+    }
+
+    async function convertPptToWord(file) {
+      updateProgress(30, 'Extraindo slides contábeis...');
+      const slides = await extractPptxText(file);
+      let wordHtml = `<html><head><meta charset="utf-8"><style>body{font-family:Segoe UI,sans-serif;padding:2cm;}.card{border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:16px;}</style></head><body><h1>${escapeHtml(file.name)}</h1>`;
+      let fullRaw = '';
+      slides.forEach(s => {
+        fullRaw += `=== Slide ${s.slideNum} ===\n${s.texts.join('\n')}\n\n`;
+        wordHtml += `<div class="card"><h3>Slide ${s.slideNum}</h3>${s.texts.map(t => `<p>• ${escapeHtml(t)}</p>`).join('')}</div>`;
+      });
+      wordHtml += `</body></html>`;
+      extractedRawText = fullRaw;
+      convertedBlob = new Blob([wordHtml], { type: 'application/msword;charset=utf-8' });
+      finishConversion(file.name.replace(/\.[^/.]+$/, '') + '.doc');
+    }
+
+    async function convertPptToPdf(file) {
+      updateProgress(30, 'Extraindo slides contábeis...');
+      const slides = await extractPptxText(file);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      let fullRaw = '';
+      slides.forEach((s, idx) => {
+        if (idx > 0) pdf.addPage();
+        fullRaw += `=== Slide ${s.slideNum} ===\n${s.texts.join('\n')}\n\n`;
+        pdf.setFontSize(14);
+        pdf.text(`Slide ${s.slideNum}`, 20, 20);
+        pdf.setFontSize(10);
+        let y = 32;
+        s.texts.forEach(txt => {
+          const lines = pdf.splitTextToSize(`• ${txt}`, 250);
+          if (y + lines.length * 6 < 190) { pdf.text(lines, 20, y); y += lines.length * 6 + 3; }
+        });
+      });
+      extractedRawText = fullRaw;
+      convertedBlob = pdf.output('blob');
+      finishConversion(file.name.replace(/\.[^/.]+$/, '') + '.pdf');
+    }
+
+    function finishConversion(filename) {
+      updateProgress(100, 'Conversão concluída com sucesso!');
+      setTimeout(() => {
+        document.getElementById('processingSection').classList.add('hidden');
+        document.getElementById('resultSection').classList.remove('hidden');
+        document.getElementById('btnDownload').onclick = () => {
+          const url = URL.createObjectURL(convertedBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+        };
+        document.getElementById('textPreviewContent').innerText = extractedRawText.trim() || 'Nenhum texto detectado.';
+        document.getElementById('resultMeta').innerText = `Arquivo pronto: ${filename} (${formatBytes(convertedBlob.size)})`;
+        showToast('Conversão finalizada com sucesso!', '🎉');
+      }, 400);
+    }
+
+    function resetApp() {
+      currentConvertFile = null;
+      convertedBlob = null;
+      extractedRawText = '';
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) fileInput.value = '';
+      document.getElementById('processingSection').classList.add('hidden');
+      document.getElementById('resultSection').classList.add('hidden');
+      document.getElementById('dropZone').classList.remove('hidden');
+      updateProgress(0, '');
+    }
+
+    function copyExtractedText() {
+      if (!extractedRawText) return;
+      copyToClipboard(extractedRawText);
+      const btn = document.getElementById('btnCopyText');
+      if (btn) {
+        btn.innerText = 'Copiado!';
+        setTimeout(() => btn.innerText = 'Copiar Texto', 2000);
+      }
+    }
+
+    // ==============================================================
+    // LÓGICA DA ABA 2: MESCLAR PDFs (PDF-LIB)
+    // ==============================================================
+    let mergeFiles = [];
+
+    function handleMergeFiles(fileList) {
+      if (!fileList || fileList.length === 0) return;
+      for (let i = 0; i < fileList.length; i++) {
+        const f = fileList[i];
+        if (f.name.toLowerCase().endsWith('.pdf')) {
+          mergeFiles.push(f);
+        }
+      }
+      renderMergeList();
+      const mergeFileInput = document.getElementById('mergeFileInput');
+      const mergeAddMoreInput = document.getElementById('mergeAddMoreInput');
+      if (mergeFileInput) mergeFileInput.value = '';
+      if (mergeAddMoreInput) mergeAddMoreInput.value = '';
+    }
+
+    function renderMergeList() {
+      const container = document.getElementById('mergeFileListContainer');
+      const list = document.getElementById('mergeFileList');
+      const count = document.getElementById('mergeCount');
+      if (mergeFiles.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+      container.classList.remove('hidden');
+      count.innerText = mergeFiles.length;
+      list.innerHTML = '';
+
+      mergeFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-3.5 rounded-xl bg-vibra-surface border border-vibra-border text-xs sm:text-sm shadow-sm';
+        item.innerHTML = `
+          <div class="flex items-center space-x-3 truncate">
+            <span class="w-6 h-6 rounded-lg bg-vibra-dark text-vibra-yellow font-black flex items-center justify-center text-xs shrink-0 shadow-sm">${index + 1}</span>
+            <div class="truncate">
+              <span class="font-bold text-slate-800 truncate block">${escapeHtml(file.name)}</span>
+              <span class="text-[11px] text-slate-500">${formatBytes(file.size)}</span>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0">
+            <button onclick="moveMergeFile(${index}, -1)" class="p-1.5 rounded hover:bg-slate-200 text-slate-600 font-bold ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}" title="Mover para cima" ${index === 0 ? 'disabled' : ''}>▲</button>
+            <button onclick="moveMergeFile(${index}, 1)" class="p-1.5 rounded hover:bg-slate-200 text-slate-600 font-bold ${index === mergeFiles.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}" title="Mover para baixo" ${index === mergeFiles.length - 1 ? 'disabled' : ''}>▼</button>
+            <button onclick="removeMergeFile(${index})" class="p-1.5 rounded hover:bg-rose-100 text-rose-600 font-bold ml-1" title="Remover">✕</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function moveMergeFile(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= mergeFiles.length) return;
+      const temp = mergeFiles[index];
+      mergeFiles[index] = mergeFiles[newIndex];
+      mergeFiles[newIndex] = temp;
+      renderMergeList();
+    }
+
+    function removeMergeFile(index) {
+      mergeFiles.splice(index, 1);
+      renderMergeList();
+    }
+
+    function clearMergeList() {
+      mergeFiles = [];
+      renderMergeList();
+    }
+
+    async function executeMergePdfs() {
+      if (mergeFiles.length < 2) {
+        showToast('Adicione pelo menos 2 arquivos PDF para mesclar.', '⚠️');
+        return;
+      }
+      const btn = document.getElementById('btnExecuteMerge');
+      btn.disabled = true;
+      btn.innerHTML = `<span>Mesclando documentos contábeis...</span>`;
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const mergedDoc = await PDFDocument.create();
+        for (let i = 0; i < mergeFiles.length; i++) {
+          const file = mergeFiles[i];
+          const arrayBuffer = await file.arrayBuffer();
+          const doc = await PDFDocument.load(arrayBuffer);
+          const copiedPages = await mergedDoc.copyPages(doc, doc.getPageIndices());
+          copiedPages.forEach(page => mergedDoc.addPage(page));
+        }
+        const mergedBytes = await mergedDoc.save();
+        const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `GCONT_mesclado_${Date.now()}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast('PDFs mesclados e baixados com sucesso!', '🎉');
+      } catch (err) {
+        console.error(err);
+        showToast('Falha ao mesclar PDFs: ' + err.message, '❌');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg><span>Mesclar e Baixar PDF Unificado</span>`;
+      }
+    }
+
+    // ==============================================================
+    // LÓGICA DA ABA 3: DIVIDIR PDF (EXTRAIR SELEÇÃO & PACOTE .ZIP)
+    // ==============================================================
+    let splitFile = null;
+    let splitDocData = null;
+    let splitPages = [];
+
+    async function loadPdfForSplit(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showToast('Selecione um arquivo PDF válido.', '⚠️');
+        return;
+      }
+      splitFile = file;
+      splitDocData = await file.arrayBuffer();
+      document.getElementById('splitUploadBox').classList.add('hidden');
+      document.getElementById('splitWorkspace').classList.remove('hidden');
+      document.getElementById('splitFileName').innerText = file.name;
+      document.getElementById('splitPageStats').innerText = 'Renderizando miniaturas das páginas...';
+
+      const pdfJsBuffer = splitDocData.slice(0);
+      const pdf = await pdfjsLib.getDocument({ data: pdfJsBuffer }).promise;
+      const numPages = pdf.numPages;
+      splitPages = [];
+
+      for (let i = 1; i <= numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 0.35 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        splitPages.push({
+          pageNum: i,
+          selected: false,
+          thumbnailUrl: canvas.toDataURL()
+        });
+      }
+
+      document.getElementById('splitPageStats').innerText = `Total: ${splitPages.length} página(s) encontradas`;
+      renderSplitPagesGrid();
+      showToast('PDF carregado! Selecione as páginas para dividir.', '✂️');
+    }
+
+    function renderSplitPagesGrid() {
+      const grid = document.getElementById('splitPagesGrid');
+      grid.innerHTML = '';
+      let selectedCount = 0;
+
+      splitPages.forEach((page, index) => {
+        if (page.selected) selectedCount++;
+        const isEven = page.pageNum % 2 === 0;
+        const card = document.createElement('div');
+        card.className = `split-thumb-card bg-vibra-surface border ${page.selected ? 'selected' : 'border-vibra-border hover:border-vibra-green'} rounded-2xl p-3 flex flex-col items-center space-y-2 relative shadow-sm cursor-pointer select-none transition group`;
+        card.onclick = () => toggleSplitPageSelection(index);
+
+        card.innerHTML = `
+          <div class="w-full flex items-center justify-between pb-1 border-b border-slate-200 text-xs">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-4 h-4 rounded flex items-center justify-center text-[10px] font-black border transition ${page.selected ? 'bg-vibra-green border-vibra-green text-white' : 'border-slate-300 bg-white group-hover:border-vibra-green'}">
+                ${page.selected ? '✓' : ''}
+              </span>
+              <span class="font-extrabold text-vibra-dark text-xs">Pág. ${page.pageNum}</span>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-bold font-mono ${isEven ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}">
+              ${isEven ? 'PAR' : 'ÍMPAR'}
+            </span>
+          </div>
+
+          <div class="w-full h-36 flex items-center justify-center bg-white rounded-xl border border-slate-200 overflow-hidden relative pointer-events-none">
+            <img src="${page.thumbnailUrl}" class="max-h-full max-w-full object-contain" alt="Miniatura pág ${page.pageNum}">
+            ${page.selected ? `<div class="absolute inset-0 bg-vibra-green/10 flex items-center justify-center"><div class="w-7 h-7 rounded-full bg-vibra-green text-white font-black flex items-center justify-center shadow">✓</div></div>` : ''}
+          </div>
+
+          <button onclick="event.stopPropagation(); downloadSingleSplitPage(${index});" class="w-full py-1 px-2 rounded-lg bg-white hover:bg-emerald-100 text-vibra-green border border-slate-200 text-[11px] font-bold transition flex items-center justify-center space-x-1">
+            <svg class="w-3 h-3 text-vibra-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            <span>Baixar Esta</span>
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.getElementById('splitBadgeCount').innerText = `${selectedCount} selecionada(s)`;
+      const zipBtnText = document.getElementById('btnZipText');
+      const extractBtnText = document.getElementById('btnExtractSelectedText');
+      if (selectedCount > 0 && selectedCount < splitPages.length) {
+        if (zipBtnText) zipBtnText.innerText = `Dividir ${selectedCount} Marcadas (.ZIP)`;
+        if (extractBtnText) extractBtnText.innerText = `Extrair ${selectedCount} Marcadas (1 PDF)`;
+      } else {
+        if (zipBtnText) zipBtnText.innerText = `Dividir Todas (${splitPages.length} no .ZIP)`;
+        if (extractBtnText) extractBtnText.innerText = `Extrair Selecionadas (1 PDF)`;
+      }
+    }
+
+    function toggleSplitPageSelection(index) {
+      splitPages[index].selected = !splitPages[index].selected;
+      renderSplitPagesGrid();
+    }
+
+    function selectSplitPreset(type) {
+      splitPages.forEach(p => {
+        if (type === 'all') p.selected = true;
+        else if (type === 'none') p.selected = false;
+        else if (type === 'odd') p.selected = (p.pageNum % 2 !== 0);
+        else if (type === 'even') p.selected = (p.pageNum % 2 === 0);
+      });
+      renderSplitPagesGrid();
+      if (type === 'odd') showToast('Todas as páginas ÍMPARES selecionadas.', '1️⃣');
+      if (type === 'even') showToast('Todas as páginas PARES selecionadas.', '2️⃣');
+    }
+
+    function applySplitRange() {
+      const input = document.getElementById('splitRangeInput').value.trim();
+      if (!input) {
+        showToast('Insira um intervalo (ex: 1-3, 5)', '⚠️');
+        return;
+      }
+      splitPages.forEach(p => p.selected = false);
+      const parts = input.split(',');
+      parts.forEach(part => {
+        part = part.trim();
+        if (part.includes('-')) {
+          const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
+          if (!isNaN(start) && !isNaN(end)) {
+            const min = Math.min(start, end);
+            const max = Math.max(start, end);
+            splitPages.forEach(p => {
+              if (p.pageNum >= min && p.pageNum <= max) p.selected = true;
+            });
+          }
+        } else {
+          const num = parseInt(part, 10);
+          if (!isNaN(num)) {
+            const match = splitPages.find(p => p.pageNum === num);
+            if (match) match.selected = true;
+          }
+        }
+      });
+      renderSplitPagesGrid();
+      showToast('Intervalo aplicado à seleção.', '✓');
+    }
+
+    function resetSplit() {
+      splitFile = null;
+      splitDocData = null;
+      splitPages = [];
+      const input = document.getElementById('splitFileInput');
+      if (input) input.value = '';
+      document.getElementById('splitRangeInput').value = '';
+      document.getElementById('splitWorkspace').classList.add('hidden');
+      document.getElementById('splitUploadBox').classList.remove('hidden');
+    }
+
+    async function executeSplitOddEven() {
+      if (!splitFile || splitPages.length === 0) return;
+      const oddPages = splitPages.filter(p => p.pageNum % 2 !== 0);
+      const evenPages = splitPages.filter(p => p.pageNum % 2 === 0);
+
+      if (evenPages.length === 0) {
+        showToast('O documento possui apenas 1 página (não há páginas pares).', '⚠️');
+        return;
+      }
+
+      const btn = document.getElementById('btnSplitOddEven');
+      btn.disabled = true;
+      btn.innerHTML = `<span>Separando Pares e Ímpares...</span>`;
+
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const freshBuffer = await splitFile.arrayBuffer();
+        const sourceDoc = await PDFDocument.load(freshBuffer);
+        const baseName = splitFile.name.replace(/\.[^/.]+$/, '');
+        const zip = new JSZip();
+
+        // 1. Ímpares
+        const oddDoc = await PDFDocument.create();
+        const oddIndices = oddPages.map(p => p.pageNum - 1);
+        const copiedOddPages = await oddDoc.copyPages(sourceDoc, oddIndices);
+        copiedOddPages.forEach(page => oddDoc.addPage(page));
+        const oddBytes = await oddDoc.save();
+        zip.file(`${baseName}_PAGINAS_IMPARES.pdf`, oddBytes);
+
+        // 2. Pares
+        const evenDoc = await PDFDocument.create();
+        const evenIndices = evenPages.map(p => p.pageNum - 1);
+        const copiedEvenPages = await evenDoc.copyPages(sourceDoc, evenIndices);
+        copiedEvenPages.forEach(page => evenDoc.addPage(page));
+        const evenBytes = await evenDoc.save();
+        zip.file(`${baseName}_PAGINAS_PARES.pdf`, evenBytes);
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName}_SEPARADO_PARES_E_IMPARES.zip`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+        showToast('Sucesso! Pacote com 2 PDFs (Pares e Ímpares) baixado.', '🎉');
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao separar pares e ímpares: ' + err.message, '❌');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg><span>Separar Pares &amp; Ímpares (2 PDFs)</span>`;
+      }
+    }
+
+    async function executeExtractSelected() {
+      const selected = splitPages.filter(p => p.selected);
+      if (selected.length === 0) {
+        showToast('Selecione ao menos 1 página clicando nos cards ou usando a seleção rápida.', '⚠️');
+        return;
+      }
+      const btn = document.getElementById('btnExtractSelected');
+      btn.disabled = true;
+      btn.innerText = 'Extraindo páginas selecionadas...';
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const freshBuffer = await splitFile.arrayBuffer();
+        const sourceDoc = await PDFDocument.load(freshBuffer);
+        const newDoc = await PDFDocument.create();
+
+        const pageIndices = selected.map(p => p.pageNum - 1);
+        const copiedPages = await newDoc.copyPages(sourceDoc, pageIndices);
+        copiedPages.forEach(page => newDoc.addPage(page));
+
+        const isOnlyOdd = selected.every(p => p.pageNum % 2 !== 0) && selected.length === splitPages.filter(p => p.pageNum % 2 !== 0).length;
+        const isOnlyEven = selected.every(p => p.pageNum % 2 === 0) && selected.length === splitPages.filter(p => p.pageNum % 2 === 0).length;
+        
+        let typeSuffix = 'extraido';
+        if (isOnlyOdd) typeSuffix = 'PAGINAS_IMPARES';
+        else if (isOnlyEven) typeSuffix = 'PAGINAS_PARES';
+
+        const pdfBytes = await newDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const baseName = splitFile.name.replace(/\.[^/.]+$/, '');
+        a.download = `${baseName}_${typeSuffix}_GCONT.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast(`Extração concluída: ${selected.length} páginas salvas em PDF!`, '🎉');
+      } catch (err) {
+        console.error(err);
+        showToast('Falha ao extrair páginas selecionadas: ' + err.message, '❌');
+      } finally {
+        btn.disabled = false;
+        renderSplitPagesGrid();
+      }
+    }
+
+    async function downloadSingleSplitPage(index) {
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const freshBuffer = await splitFile.arrayBuffer();
+        const sourceDoc = await PDFDocument.load(freshBuffer);
+        const newDoc = await PDFDocument.create();
+        const [copiedPage] = await newDoc.copyPages(sourceDoc, [index]);
+        newDoc.addPage(copiedPage);
+
+        const pdfBytes = await newDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const baseName = splitFile.name.replace(/\.[^/.]+$/, '');
+        a.download = `${baseName}_pagina_${index + 1}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast(`Página ${index + 1} baixada com sucesso!`, '📄');
+      } catch (err) {
+        showToast('Erro ao baixar página individual: ' + err.message, '❌');
+      }
+    }
+
+    async function executeSplitZip() {
+      if (!splitFile || splitPages.length === 0) return;
+      const selected = splitPages.filter(p => p.selected);
+      const targetPages = (selected.length > 0) ? selected : splitPages;
+
+      const btn = document.getElementById('btnSplitAllZip');
+      btn.disabled = true;
+      btn.innerHTML = `<span>Criando ZIP com ${targetPages.length} arquivos...</span>`;
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const freshBuffer = await splitFile.arrayBuffer();
+        const sourceDoc = await PDFDocument.load(freshBuffer);
+        const zip = new JSZip();
+        const baseName = splitFile.name.replace(/\.[^/.]+$/, '');
+
+        for (let i = 0; i < targetPages.length; i++) {
+          const item = targetPages[i];
+          const singleDoc = await PDFDocument.create();
+          const [page] = await singleDoc.copyPages(sourceDoc, [item.pageNum - 1]);
+          singleDoc.addPage(page);
+          const pdfBytes = await singleDoc.save();
+          const padNum = String(item.pageNum).padStart(String(splitPages.length).length, '0');
+          const parity = (item.pageNum % 2 === 0) ? 'par' : 'impar';
+          zip.file(`${baseName}_pag_${padNum}_${parity}.pdf`, pdfBytes);
+        }
+
+        const isSubset = selected.length > 0 && selected.length < splitPages.length;
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName}_${isSubset ? 'selecionadas' : 'todas_paginas'}_GCONT.zip`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast(`Pacote ZIP gerado com ${targetPages.length} PDFs individuais!`, '📦');
+      } catch (err) {
+        console.error(err);
+        showToast('Falha ao empacotar páginas em ZIP: ' + err.message, '❌');
+      } finally {
+        btn.disabled = false;
+        renderSplitPagesGrid();
+      }
+    }
+    const executeSplitAllZip = executeSplitZip;
+
+    // ==============================================================
+    // LÓGICA DA ABA 4: ORGANIZAR PÁGINAS (GIRAR, DELETAR, MOVER)
+    // ==============================================================
+    let organizeFile = null;
+    let organizeDocData = null;
+    let organizePages = [];
+    let sortableInstance = null;
+
+    async function loadPdfForOrganizer(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showToast('Selecione um arquivo PDF válido.', '⚠️');
+        return;
+      }
+      organizeFile = file;
+      organizeDocData = await file.arrayBuffer();
+      document.getElementById('organizeUploadBox').classList.add('hidden');
+      document.getElementById('organizeWorkspace').classList.remove('hidden');
+      document.getElementById('organizeFileName').innerText = file.name;
+      document.getElementById('organizePageStats').innerText = 'Gerando miniaturas das páginas...';
+
+      const pdfJsBuffer = organizeDocData.slice(0);
+      const pdf = await pdfjsLib.getDocument({ data: pdfJsBuffer }).promise;
+      const numPages = pdf.numPages;
+      organizePages = [];
+
+      for (let i = 1; i <= numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 0.35 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        organizePages.push({
+          originalIndex: i - 1,
+          rotation: 0,
+          thumbnailUrl: canvas.toDataURL()
+        });
+      }
+
+      document.getElementById('organizePageStats').innerText = `${organizePages.length} página(s) encontradas`;
+      renderPagesGrid();
+      showToast('Páginas carregadas! Arraste os cards para reorganizar.', '🖐️');
+    }
+
+    function renderPagesGrid() {
+      const grid = document.getElementById('pagesGrid');
+      grid.innerHTML = '';
+
+      organizePages.forEach((page, index) => {
+        const card = document.createElement('div');
+        card.className = 'page-thumb-card bg-vibra-surface border border-vibra-border hover:border-vibra-green rounded-2xl p-3 flex flex-col items-center space-y-2 relative shadow-sm select-none cursor-grab active:cursor-grabbing group';
+        card.dataset.index = index;
+        card.innerHTML = `
+          <div class="w-full flex items-center justify-between text-xs font-bold text-slate-700 pb-1 border-b border-slate-200">
+            <div class="flex items-center space-x-1 text-slate-400 group-hover:text-vibra-green transition-colors">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M7 4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-6 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm-6 5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm6 0a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+              </svg>
+              <span class="page-num-label text-vibra-dark font-extrabold text-xs">Pág. ${index + 1}</span>
+            </div>
+            <span class="text-[10px] text-slate-400 font-mono">#${page.originalIndex + 1}</span>
+          </div>
+          
+          <div class="w-full h-36 flex items-center justify-center bg-white rounded-xl border border-slate-200 overflow-hidden relative pointer-events-none">
+            <img src="${page.thumbnailUrl}" style="transform: rotate(${page.rotation}deg); max-height: 100%; max-width: 100%;" class="transition-transform duration-200 object-contain">
+            ${page.rotation !== 0 ? `<span class="absolute bottom-1 right-1 text-[9px] bg-vibra-dark/90 text-vibra-yellow px-1.5 py-0.5 rounded font-mono font-bold">${page.rotation}°</span>` : ''}
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5 w-full pt-1 pointer-events-auto">
+            <button onclick="rotatePage(${index}); event.stopPropagation();" class="py-1.5 px-2 bg-white hover:bg-emerald-50 hover:text-vibra-dark rounded-lg text-xs font-bold text-slate-700 border border-slate-200 flex items-center justify-center space-x-1 transition" title="Girar 90 graus">
+              <span>↻</span>
+              <span class="text-[11px]">Girar</span>
+            </button>
+            <button onclick="deletePage(${index}); event.stopPropagation();" class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-bold text-rose-600 border border-rose-200 flex items-center justify-center space-x-1 transition" title="Excluir página">
+              <span>🗑️</span>
+              <span class="text-[11px]">Excluir</span>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.getElementById('organizePageStats').innerText = `${organizePages.length} página(s) ativas no documento`;
+      initSortableGrid();
+    }
+
+    function initSortableGrid() {
+      const grid = document.getElementById('pagesGrid');
+      if (sortableInstance) {
+        sortableInstance.destroy();
+      }
+      if (window.Sortable) {
+        sortableInstance = new Sortable(grid, {
+          animation: 200,
+          ghostClass: 'sortable-ghost',
+          chosenClass: 'sortable-chosen',
+          dragClass: 'sortable-drag',
+          filter: 'button',
+          preventOnFilter: false,
+          forceFallback: false,
+          onEnd: function(evt) {
+            if (evt.oldIndex === evt.newIndex) return;
+            const movedItem = organizePages.splice(evt.oldIndex, 1)[0];
+            organizePages.splice(evt.newIndex, 0, movedItem);
+            renderPagesGrid();
+            showToast(`Página movida para a posição ${evt.newIndex + 1}`, '🔀');
+          }
+        });
+      }
+    }
+
+    function rotatePage(index) {
+      organizePages[index].rotation = (organizePages[index].rotation + 90) % 360;
+      renderPagesGrid();
+    }
+
+    function deletePage(index) {
+      if (organizePages.length <= 1) {
+        showToast('O documento deve manter pelo menos 1 página.', '⚠️');
+        return;
+      }
+      organizePages.splice(index, 1);
+      renderPagesGrid();
+    }
+
+    function resetOrganize() {
+      if (sortableInstance) {
+        sortableInstance.destroy();
+        sortableInstance = null;
+      }
+      organizeFile = null;
+      organizeDocData = null;
+      organizePages = [];
+      const input = document.getElementById('organizeFileInput');
+      if (input) input.value = '';
+      document.getElementById('organizeWorkspace').classList.add('hidden');
+      document.getElementById('organizeUploadBox').classList.remove('hidden');
+    }
+
+    async function saveOrganizedPdf() {
+      if (!organizeFile || organizePages.length === 0) return;
+      const btn = document.getElementById('btnSaveOrganized');
+      btn.disabled = true;
+      btn.innerText = 'Construindo PDF...';
+      try {
+        const { PDFDocument, degrees } = window.PDFLib;
+        const freshBuffer = await organizeFile.arrayBuffer();
+        const sourceDoc = await PDFDocument.load(freshBuffer);
+        const newDoc = await PDFDocument.create();
+
+        for (let i = 0; i < organizePages.length; i++) {
+          const item = organizePages[i];
+          const [copiedPage] = await newDoc.copyPages(sourceDoc, [item.originalIndex]);
+          const currentRotation = copiedPage.getRotation().angle || 0;
+          copiedPage.setRotation(degrees((currentRotation + item.rotation) % 360));
+          newDoc.addPage(copiedPage);
+        }
+
+        const pdfBytes = await newDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `GCONT_organizado_${organizeFile.name}`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast('PDF organizado salvo com sucesso!', '✨');
+      } catch (err) {
+        console.error(err);
+        showToast('Falha ao salvar PDF organizado: ' + err.message, '❌');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg><span>Salvar e Baixar PDF</span>`;
+      }
+    }
+
+    // ==============================================================
+    // LÓGICA DA ABA 5: ASSINAR PDF
+    // ==============================================================
+    let signFile = null;
+    let signDocData = null;
+    let signPdfJsDoc = null;
+    let currentSignPageNum = 1;
+
+    let signaturePadCanvas = null;
+    let sigCtx = null;
+    let isDrawing = false;
+    let penColor = '#004415';
+    let signatureDataUrl = null;
+
+    let draggableStamp = null;
+    let isDraggingStamp = false;
+    let stampOffset = { x: 0, y: 0 };
+    let stampRelativePos = { xRatio: 0.5, yRatio: 0.75 };
+
+    function resizeSignatureCanvas() {
+      signaturePadCanvas = document.getElementById('sigCanvas');
+      if (!signaturePadCanvas) return;
+      const rect = signaturePadCanvas.getBoundingClientRect();
+      if (rect.width > 0 && signaturePadCanvas.width !== rect.width) {
+        const saved = signatureDataUrl;
+        signaturePadCanvas.width = rect.width;
+        signaturePadCanvas.height = 180;
+        sigCtx = signaturePadCanvas.getContext('2d');
+        sigCtx.lineCap = 'round';
+        sigCtx.lineJoin = 'round';
+        sigCtx.strokeStyle = penColor;
+        sigCtx.lineWidth = 2.8;
+        if (saved) {
+          const img = new Image();
+          img.onload = () => sigCtx && sigCtx.drawImage(img, 0, 0);
+          img.src = saved;
+        }
+      }
+    }
+    window.addEventListener('resize', resizeSignatureCanvas);
+
+    function getCoords(e) {
+      if (!signaturePadCanvas) return { x: 0, y: 0 };
+      const rect = signaturePadCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function startDrawing(e) {
+      if (!sigCtx) return;
+      isDrawing = true;
+      const { x, y } = getCoords(e);
+      sigCtx.beginPath();
+      sigCtx.moveTo(x, y);
+    }
+
+    function draw(e) {
+      if (!isDrawing || !sigCtx) return;
+      e.preventDefault();
+      const { x, y } = getCoords(e);
+      sigCtx.lineTo(x, y);
+      sigCtx.stroke();
+    }
+
+    function stopDrawing() {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (signaturePadCanvas) {
+        signatureDataUrl = signaturePadCanvas.toDataURL('image/png');
+        updateStampImage();
+      }
+    }
+
+    function setPenColor(color) {
+      penColor = color;
+      if (sigCtx) sigCtx.strokeStyle = color;
+    }
+
+    function clearSignatureCanvas() {
+      if (!sigCtx || !signaturePadCanvas) return;
+      sigCtx.clearRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+      signatureDataUrl = null;
+      const stampImg = document.getElementById('stampImagePreview');
+      const stampText = document.getElementById('stampPlaceholderText');
+      if (stampImg) stampImg.src = '';
+      if (stampText) stampText.classList.remove('hidden');
+    }
+
+    function updateStampImage() {
+      if (signatureDataUrl) {
+        const stampImg = document.getElementById('stampImagePreview');
+        const stampText = document.getElementById('stampPlaceholderText');
+        if (stampImg) stampImg.src = signatureDataUrl;
+        if (stampText) stampText.classList.add('hidden');
+      }
+    }
+
+    function updateSignatureStampSize() {
+      const slider = document.getElementById('sigScaleSlider');
+      const stamp = document.getElementById('draggableStamp');
+      if (slider && stamp) {
+        const scale = slider.value;
+        stamp.style.width = `${scale}px`;
+        stamp.style.height = `${scale * 0.48}px`;
+      }
+    }
+
+    function initSignatureEvents() {
+      signaturePadCanvas = document.getElementById('sigCanvas');
+      draggableStamp = document.getElementById('draggableStamp');
+
+      if (signaturePadCanvas) {
+        sigCtx = signaturePadCanvas.getContext('2d');
+        signaturePadCanvas.addEventListener('mousedown', startDrawing);
+        signaturePadCanvas.addEventListener('mousemove', draw);
+        signaturePadCanvas.addEventListener('touchstart', startDrawing, { passive: false });
+        signaturePadCanvas.addEventListener('touchmove', draw, { passive: false });
+      }
+
+      window.addEventListener('mouseup', stopDrawing);
+      window.addEventListener('touchend', stopDrawing);
+
+      const sigImageUpload = document.getElementById('sigImageUpload');
+      if (sigImageUpload) {
+        sigImageUpload.addEventListener('change', e => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const img = new Image();
+            img.onload = () => {
+              clearSignatureCanvas();
+              if (sigCtx && signaturePadCanvas) {
+                sigCtx.drawImage(img, 10, 10, signaturePadCanvas.width - 20, signaturePadCanvas.height - 20);
+                signatureDataUrl = signaturePadCanvas.toDataURL('image/png');
+                updateStampImage();
+              }
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (draggableStamp) {
+        draggableStamp.addEventListener('mousedown', onStampMouseDown);
+        draggableStamp.addEventListener('touchstart', onStampMouseDown, { passive: false });
+      }
+
+      window.addEventListener('mousemove', onStampMouseMove);
+      window.addEventListener('mouseup', onStampMouseUp);
+      window.addEventListener('touchmove', onStampMouseMove, { passive: false });
+      window.addEventListener('touchend', onStampMouseUp);
+    }
+
+    async function loadPdfForSigning(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showToast('Selecione um arquivo PDF válido.', '⚠️');
+        return;
+      }
+      signFile = file;
+      signDocData = await file.arrayBuffer();
+      const pdfJsBuffer = signDocData.slice(0);
+      signPdfJsDoc = await pdfjsLib.getDocument({ data: pdfJsBuffer }).promise;
+
+      document.getElementById('signUploadBox').classList.add('hidden');
+      document.getElementById('signWorkspace').classList.remove('hidden');
+
+      const select = document.getElementById('signPageSelect');
+      select.innerHTML = '';
+      for (let i = 1; i <= signPdfJsDoc.numPages; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = `Página ${i} de ${signPdfJsDoc.numPages}`;
+        select.appendChild(opt);
+      }
+      currentSignPageNum = 1;
+      resizeSignatureCanvas();
+      await loadSignPagePreview();
+    }
+
+    async function loadSignPagePreview() {
+      const select = document.getElementById('signPageSelect');
+      currentSignPageNum = parseInt(select.value, 10);
+      const page = await signPdfJsDoc.getPage(currentSignPageNum);
+      const canvas = document.getElementById('signPageCanvas');
+      const containerWidth = Math.min(520, window.innerWidth - 60);
+      const initialViewport = page.getViewport({ scale: 1.0 });
+      const scale = containerWidth / initialViewport.width;
+      const viewport = page.getViewport({ scale });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      positionStampAtRelative();
+    }
+
+    const pageWrapper = document.getElementById('pageViewerWrapper');
+
+    function onStampMouseDown(e) {
+      draggableStamp = document.getElementById('draggableStamp');
+      if (!draggableStamp) return;
+      isDraggingStamp = true;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const stampRect = draggableStamp.getBoundingClientRect();
+      stampOffset.x = clientX - stampRect.left;
+      stampOffset.y = clientY - stampRect.top;
+      e.preventDefault();
+    }
+
+    function onStampMouseMove(e) {
+      draggableStamp = document.getElementById('draggableStamp');
+      const pageWrapper = document.getElementById('pageViewerWrapper');
+      if (!isDraggingStamp || !pageWrapper || !draggableStamp) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const wrapperRect = pageWrapper.getBoundingClientRect();
+      const stampW = draggableStamp.offsetWidth;
+      const stampH = draggableStamp.offsetHeight;
+
+      let left = clientX - wrapperRect.left - stampOffset.x;
+      let top = clientY - wrapperRect.top - stampOffset.y;
+
+      left = Math.max(0, Math.min(left, wrapperRect.width - stampW));
+      top = Math.max(0, Math.min(top, wrapperRect.height - stampH));
+
+      draggableStamp.style.left = `${left}px`;
+      draggableStamp.style.top = `${top}px`;
+      draggableStamp.style.transform = 'none';
+
+      stampRelativePos.xRatio = left / wrapperRect.width;
+      stampRelativePos.yRatio = top / wrapperRect.height;
+    }
+
+    function onStampMouseUp() {
+      isDraggingStamp = false;
+    }
+
+    function positionStampAtRelative() {
+      const pageWrapper = document.getElementById('pageViewerWrapper');
+      draggableStamp = document.getElementById('draggableStamp');
+      if (!pageWrapper || !draggableStamp) return;
+      const wrapperRect = pageWrapper.getBoundingClientRect();
+      const left = stampRelativePos.xRatio * wrapperRect.width;
+      const top = stampRelativePos.yRatio * wrapperRect.height;
+      draggableStamp.style.left = `${left}px`;
+      draggableStamp.style.top = `${top}px`;
+      draggableStamp.style.transform = 'none';
+    }
+
+    function resetSign() {
+      signFile = null;
+      signDocData = null;
+      signPdfJsDoc = null;
+      const input = document.getElementById('signFileInput');
+      if (input) input.value = '';
+      clearSignatureCanvas();
+      document.getElementById('signWorkspace').classList.add('hidden');
+      document.getElementById('signUploadBox').classList.remove('hidden');
+    }
+
+    async function applySignatureAndDownload() {
+      if (!signatureDataUrl) {
+        showToast('Desenhe ou carregue sua assinatura antes de aplicar.', '⚠️');
+        return;
+      }
+      const btn = document.getElementById('btnApplySignature');
+      btn.disabled = true;
+      btn.innerText = 'Carimbando assinatura no PDF...';
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const freshBuffer = await signFile.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(freshBuffer);
+        const page = pdfDoc.getPage(currentSignPageNum - 1);
+        const { width: pdfWidth, height: pdfHeight } = page.getSize();
+
+        const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
+        const canvas = document.getElementById('signPageCanvas');
+        const stampW = draggableStamp.offsetWidth;
+        const stampH = draggableStamp.offsetHeight;
+        const stampLeft = draggableStamp.offsetLeft;
+        const stampTop = draggableStamp.offsetTop;
+
+        const scaleX = pdfWidth / canvas.width;
+        const scaleY = pdfHeight / canvas.height;
+        const targetX = stampLeft * scaleX;
+        const targetWidth = stampW * scaleX;
+        const targetHeight = stampH * scaleY;
+        const targetY = pdfHeight - ((stampTop + stampH) * scaleY);
+
+        page.drawImage(signatureImage, {
+          x: targetX,
+          y: targetY,
+          width: targetWidth,
+          height: targetHeight,
+        });
+
+        const signedBytes = await pdfDoc.save();
+        const blob = new Blob([signedBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `GCONT_assinado_${signFile.name}`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast('Documento assinado com sucesso!', '✍️');
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao estampar assinatura: ' + err.message, '❌');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg><span>Aplicar Assinatura e Baixar PDF</span>`;
+      }
+    }
+
+    // ==============================================================
+    // LÓGICA DA ABA 6: EXTRATOR FISCAL & DANFE (PDF & XML)
+    // ==============================================================
+    let nfeLoadedFile = null;
+    let nfeExtractedList = [];
+
+    async function processNfeFiles(files) {
+      if (!files || files.length === 0) return;
+      nfeLoadedFile = files[0];
+      document.getElementById('nfeUploadBox').classList.add('hidden');
+      document.getElementById('nfeWorkspace').classList.remove('hidden');
+      document.getElementById('nfeFileName').innerText = files.length === 1 ? nfeLoadedFile.name : `${files.length} arquivos selecionados`;
+      document.getElementById('nfeScanStatus').innerText = 'Analisando chaves de acesso e dados fiscais...';
+
+      nfeExtractedList = [];
+      showToast('Iniciando varredura fiscal...', '🔍');
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.name.toLowerCase().endsWith('.xml')) {
+          await parseXmlNfe(file);
+        } else if (file.name.toLowerCase().endsWith('.pdf')) {
+          await parsePdfNfe(file);
+        }
+      }
+
+      renderNfeResults();
+    }
+
+    async function parseXmlNfe(file) {
+      try {
+        const text = await file.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'text/xml');
+
+        const chNFe = xml.querySelector('chNFe')?.textContent || 
+                      xml.querySelector('infNFe')?.getAttribute('Id')?.replace(/\D/g, '') || '';
+        const nNF = xml.querySelector('nNF')?.textContent || '';
+        const dhEmi = xml.querySelector('dhEmi, dEmi')?.textContent || '';
+        const emitNome = xml.querySelector('emit > xNome')?.textContent || 'Emitente não informado';
+        const emitCnpj = xml.querySelector('emit > CNPJ, emit > CPF')?.textContent || '';
+        const destNome = xml.querySelector('dest > xNome')?.textContent || 'Destinatário não informado';
+        const destCnpj = xml.querySelector('dest > CNPJ, dest > CPF')?.textContent || '';
+        const vNF = parseFloat(xml.querySelector('total vNF, ICMSTot vNF')?.textContent || '0');
+
+        let dataFormatada = dhEmi;
+        if (dhEmi.includes('-')) {
+          const [d] = dhEmi.split('T');
+          const [ano, mes, dia] = d.split('-');
+          dataFormatada = `${dia}/${mes}/${ano}`;
+        }
+
+        nfeExtractedList.push({
+          page: 1,
+          tipo: 'NF-e (XML)',
+          chave: chNFe,
+          numero: nNF,
+          emitente: emitNome,
+          cnpjEmitente: formatCnpjCpf(emitCnpj),
+          destinatario: destNome,
+          cnpjDestinatario: formatCnpjCpf(destCnpj),
+          data: dataFormatada || '-',
+          valorTotal: vNF,
+          sourceFile: file.name
+        });
+      } catch (err) {
+        console.error('Erro ao ler XML fiscal:', err);
+      }
+    }
+
+    async function parsePdfNfe(file) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map(it => it.str).join(' ');
+
+          const chaveMatch = pageText.match(/\b(?:\d{4}[\s\.-]?){10}\d{4}\b/) || pageText.match(/\b\d{44}\b/);
+          const rawChave = chaveMatch ? chaveMatch[0].replace(/\D/g, '') : '';
+
+          const numMatch = pageText.match(/(?:N[º°\.]?\s*|NF-e\s*N[º°\.]?\s*|Número:?\s*)(\d{1,3}(?:\.\d{3})*|\d{1,9})/i);
+          const numNota = numMatch ? numMatch[1].replace(/\./g, '') : '';
+
+          const cnpjs = pageText.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/g) || [];
+
+          const valorMatch = pageText.match(/(?:VALOR TOTAL(?: DA NOTA| DO DOCUMENTO)?|VLR\.?\s*TOTAL|TOTAL DA NF|VALOR L[ÍI]QUIDO)[\s:\$R]*([\d\.]+(?:,\d{2}))/i);
+          let valor = 0;
+          if (valorMatch) {
+            valor = parseFloat(valorMatch[1].replace(/\./g, '').replace(',', '.'));
+          }
+
+          const dataMatch = pageText.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+          const dataEmissao = dataMatch ? dataMatch[0] : '-';
+
+          const isDanfe = /DANFE|DOCUMENTO AUXILIAR|NF-E|NOTA FISCAL ELETR[OÔ]NICA/i.test(pageText);
+          const isNfse = /NFS-E|NOTA FISCAL DE SERVI[ÇC]OS|PREFEITURA/i.test(pageText);
+
+          if (rawChave || isDanfe || isNfse || numNota) {
+            nfeExtractedList.push({
+              page: i,
+              tipo: isDanfe ? 'DANFE (NF-e)' : (isNfse ? 'NFS-e' : 'Documento Fiscal'),
+              chave: rawChave,
+              numero: numNota || `Folha ${i}`,
+              emitente: cnpjs[0] ? `CNPJ ${cnpjs[0]}` : 'Identificado no documento',
+              cnpjEmitente: cnpjs[0] || '-',
+              destinatario: cnpjs[1] ? `CNPJ ${cnpjs[1]}` : 'Consulte o documento',
+              cnpjDestinatario: cnpjs[1] || '-',
+              data: dataEmissao,
+              valorTotal: valor,
+              sourceFile: file.name
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao ler PDF fiscal:', err);
+      }
+    }
+
+    function formatCnpjCpf(v) {
+      if (!v) return '-';
+      const clean = v.replace(/\D/g, '');
+      if (clean.length === 14) {
+        return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      }
+      if (clean.length === 11) {
+        return clean.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+      }
+      return v;
+    }
+
+    function formatMoeda(val) {
+      return (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function renderNfeResults() {
+      const tbody = document.getElementById('nfeTableBody');
+      tbody.innerHTML = '';
+
+      let totalValor = 0;
+      const pagesSet = new Set();
+
+      nfeExtractedList.forEach((nfe) => {
+        totalValor += (nfe.valorTotal || 0);
+        pagesSet.add(nfe.page);
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-emerald-50/40 transition-colors';
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-bold text-slate-800">#${nfe.page}</td>
+          <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${nfe.tipo.includes('XML') ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-vibra-dark'}">${nfe.tipo}</span></td>
+          <td class="py-3 px-3 font-bold text-slate-900">${nfe.numero || '-'}</td>
+          <td class="py-3 px-3 font-mono text-[11px] text-slate-600">
+            ${nfe.chave ? `<span class="hover:text-vibra-green cursor-pointer underline" onclick="copyToClipboard('${nfe.chave}')" title="Clique para copiar">${nfe.chave}</span>` : '<span class="text-slate-400 italic">Não identificada</span>'}
+          </td>
+          <td class="py-3 px-3">${nfe.cnpjEmitente || nfe.emitente}</td>
+          <td class="py-3 px-3">${nfe.cnpjDestinatario || nfe.destinatario}</td>
+          <td class="py-3 px-3">${nfe.data}</td>
+          <td class="py-3 px-3 text-right font-black text-slate-900">${formatMoeda(nfe.valorTotal)}</td>
+          <td class="py-3 px-3 text-center">
+            ${nfe.chave ? `<button onclick="copyToClipboard('${nfe.chave}')" class="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-100 text-vibra-green font-bold text-[10px] transition" title="Copiar Chave">Copiar</button>` : '-'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('nfeBadgeCount').innerText = `${nfeExtractedList.length} notas identificadas`;
+      document.getElementById('kpiNfeTotal').innerText = nfeExtractedList.length;
+      document.getElementById('kpiNfeValorTotal').innerText = formatMoeda(totalValor);
+      document.getElementById('kpiNfePagesCount').innerText = `${pagesSet.size} página(s)`;
+      document.getElementById('nfeScanStatus').innerText = `Varredura concluída • ${nfeExtractedList.length} registros extraídos`;
+
+      if (nfeExtractedList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400 italic">Nenhum padrão de DANFE ou Chave de Acesso encontrado neste documento.</td></tr>`;
+      }
+    }
+
+    function filterNfeTable() {
+      const q = document.getElementById('nfeTableSearch').value.toLowerCase();
+      const rows = document.querySelectorAll('#nfeTableBody tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+
+    function copyAllAccessKeys() {
+      const keys = nfeExtractedList.map(n => n.chave).filter(k => k && k.length >= 40);
+      if (keys.length === 0) {
+        showToast('Nenhuma chave de 44 dígitos encontrada para copiar.', '⚠️');
+        return;
+      }
+      copyToClipboard(keys.join('\n'));
+      showToast(`${keys.length} chave(s) de acesso copiadas!`, '🔑');
+    }
+
+    function exportNfeToExcel() {
+      if (nfeExtractedList.length === 0) {
+        showToast('Nenhuma nota para exportar.', '⚠️');
+        return;
+      }
+      const data = nfeExtractedList.map(n => ({
+        'Página': n.page,
+        'Tipo': n.tipo,
+        'Número NF': n.numero,
+        'Chave de Acesso (44 Dígitos)': n.chave,
+        'Emitente': n.emitente,
+        'CNPJ Emitente': n.cnpjEmitente,
+        'Destinatário': n.destinatario,
+        'CNPJ Destinatário': n.cnpjDestinatario,
+        'Data Emissão': n.data,
+        'Valor Total (R$)': n.valorTotal,
+        'Arquivo de Origem': n.sourceFile
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Notas Fiscais GCONT');
+
+      const fileName = `GCONT_Notas_Fiscais_${Date.now()}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      showToast('Planilha Excel de Notas Fiscais gerada!', '📊');
+    }
+
+    async function extractOnlyNfePagesToPdf() {
+      if (!nfeLoadedFile || !nfeLoadedFile.name.toLowerCase().endsWith('.pdf')) {
+        showToast('A extração de páginas PDF requer um arquivo PDF de origem.', '⚠️');
+        return;
+      }
+
+      const pages = Array.from(new Set(nfeExtractedList.map(n => n.page))).sort((a,b) => a - b);
+      if (pages.length === 0) {
+        showToast('Nenhuma página com nota fiscal para compilar.', '⚠️');
+        return;
+      }
+
+      const btn = document.getElementById('btnExtractNfePagesPdf');
+      btn.disabled = true;
+      btn.innerText = 'Compilando notas em PDF...';
+
+      try {
+        const { PDFDocument } = window.PDFLib;
+        const arrayBuffer = await nfeLoadedFile.arrayBuffer();
+        const sourceDoc = await PDFDocument.load(arrayBuffer);
+        const newDoc = await PDFDocument.create();
+
+        const indices = pages.map(p => p - 1);
+        const copied = await newDoc.copyPages(sourceDoc, indices);
+        copied.forEach(page => newDoc.addPage(page));
+
+        const pdfBytes = await newDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const baseName = nfeLoadedFile.name.replace(/\.[^/.]+$/, '');
+        a.download = `${baseName}_APENAS_NOTAS_FISCAIS_GCONT.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        showToast(`Sucesso: ${pages.length} páginas com notas fiscais salvas em PDF!`, '📑');
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao compilar páginas com NF: ' + err.message, '❌');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-4 h-4 text-vibra-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><span>Gerar PDF Só com as NFs</span>`;
+      }
+    }
+
+    function resetNfeScanner() {
+      nfeLoadedFile = null;
+      nfeExtractedList = [];
+      const input = document.getElementById('nfeFileInput');
+      if (input) input.value = '';
+      document.getElementById('nfeTableSearch').value = '';
+      document.getElementById('nfeWorkspace').classList.add('hidden');
+      document.getElementById('nfeUploadBox').classList.remove('hidden');
+    }
+
+    // Inicialização segura de todos os listeners e módulos do app
+    function initializeStudioApp() {
+      setConversionMode('pdf-word');
+
+      // Registro seguro de todas as drop zones
+      setupDropZone('dropZone', 'fileInput', handleFileSelection);
+      setupDropZone('mergeDropZone', 'mergeFileInput', handleMergeFiles, true);
+      setupDropZone('splitDropZone', 'splitFileInput', loadPdfForSplit);
+      setupDropZone('organizeDropZone', 'organizeFileInput', loadPdfForOrganizer);
+      setupDropZone('signDropZone', 'signFileInput', loadPdfForSigning);
+      setupDropZone('nfeDropZone', 'nfeFileInput', processNfeFiles, true);
+
+      // Botão adicional de anexar mais na mesclagem
+      const mergeAddMoreInput = document.getElementById('mergeAddMoreInput');
+      if (mergeAddMoreInput) {
+        mergeAddMoreInput.addEventListener('change', e => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleMergeFiles(e.target.files);
+          }
+        });
+      }
+
+      // Inicialização do módulo de assinatura
+      initSignatureEvents();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeStudioApp);
+    } else {
+      initializeStudioApp();
+    }
+  </script>
+</body>
+</html>
